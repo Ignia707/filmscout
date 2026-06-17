@@ -1,10 +1,16 @@
 // App component
 
+// React tools
 import { useState, useEffect } from 'react';
+import { useDebounce } from 'react-use';
+
+// Components and styles
 import './App.css'
 import Search from './components/Search';
 import Spinner from './components/Spinner';
+import MovieCard from './components/MovieCard';
 
+// API end point - to get movies
 const API_BASE_URL = 'https://api.themoviedb.org/3';
 const API_KEY      = import.meta.env.VITE_TMDB_API_KEY;
 
@@ -18,17 +24,24 @@ const API_OPTIONS  = {
 
 export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [movieList, setMovieList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Optimize search - debouncing
+  useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
+
   useEffect(() => {
-      async function fetchMovies () {
+      // search, fetch movies 
+      async function fetchMovies (query = '') {
         setIsLoading(true);
         setErrorMessage('');
 
         try {
-          const endPoint = `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
+          const endPoint = query
+          ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
+          : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
           
           const response = await fetch(endPoint, API_OPTIONS);
           if (!response.ok) {
@@ -47,8 +60,8 @@ export default function App() {
         }
     }
 
-    fetchMovies();
-  }, []);
+    fetchMovies(debouncedSearchTerm);
+  }, [debouncedSearchTerm]);
 
   return (
     <main>
@@ -63,7 +76,9 @@ export default function App() {
         </header>
 
         <section className='all-movies'>
-          <h2 className='mt-[50px]'>All Movies</h2>
+          {debouncedSearchTerm.length !== 0 
+          ? (<> <br /><br /> </>)
+          : <h2 className='mt-[50px]'>Popular</h2>}
 
           {isLoading ? (
             <Spinner />
@@ -72,9 +87,12 @@ export default function App() {
               <p className='text-red-500'>{errorMessage}</p>
             ) : (
               <ul>
-                {movieList.map((movie) => (
-                  <p key={movie.id} className='text-white'>{movie.title}</p>
-                ))}
+                {movieList.length !== 0
+                ? movieList.map((movie) => (
+                  <MovieCard key={movie.id} movie={movie}/>
+                ))
+                : <p className='text-white'>🚧 Seems like we don't have what you ask</p>
+              }
               </ul>
             )
           )}
