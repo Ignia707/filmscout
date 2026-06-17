@@ -13,9 +13,6 @@ export default function Search({ searchTerm, setSearchTerm }) {
                     onChange={(e) => {setSearchTerm(e.target.value)}}
                 />
             </div>
-            <h3 className="text-white">
-                    {searchTerm}
-                </h3>
         </div>
     );
 }
