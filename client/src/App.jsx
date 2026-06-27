@@ -9,26 +9,18 @@ import './App.css'
 import Search from './components/Search';
 import Spinner from './components/Spinner';
 import MovieCard from './components/MovieCard';
-import { getTrendingMovies, updateSearchCount } from './services/appwrite';
+import { getDiscoverMovies, searchMovies as searchMoviesAPI, getTrendingMovies } from './services/api';
 
-// API end point - to get movies
-const API_BASE_URL = 'https://api.themoviedb.org/3';
-const API_KEY      = import.meta.env.VITE_TMDB_API_KEY;
-
-const API_OPTIONS  = {
-  method: 'GET',
-  headers: {
-    accept: 'application/json',
-    Authorization: `Bearer ${API_KEY}`
-  }
-} 
 
 export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
+  const [trendingError, setTrendingError] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+
   const [isLoading, setIsLoading] = useState(false);
+  const [isTrendingLoading, setIsTrendingLoading] = useState(false);
 
   const [movieList, setMovieList] = useState([]);
   const [trendingMovies, setTrendingMovies] = useState([]);
@@ -36,7 +28,7 @@ export default function App() {
   // Optimize search - debouncing
   useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
 
-
+  // fetch movies on query
   useEffect(() => {
       // search, fetch movies 
       async function fetchMovies (query = '') {
@@ -44,21 +36,12 @@ export default function App() {
         setErrorMessage('');
 
         try {
-          const endPoint = query
-          ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
-          : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
+          // gets results : all movies OR searched results
+          const results = query 
+            ? await searchMoviesAPI(query) 
+            : await getDiscoverMovies();
           
-          const response = await fetch(endPoint, API_OPTIONS);
-          if (!response.ok) {
-            throw new Error('Failed to fetch movies');
-          }
-
-          const data = await response.json();    
-          setMovieList(data.results || []);
-
-          if(query && data.results.length > 0) {
-            await updateSearchCount(query, data.results[0]);
-          }
+          setMovieList(results);
 
         } catch (error) {
           console.error(`Error fetching movies: ${error}`);
@@ -75,18 +58,25 @@ export default function App() {
     fetchMovies(debouncedSearchTerm);
   }, [debouncedSearchTerm]);
 
+  // fetch trending movies on mount
   useEffect(() => {
     // load trending movies ONLY once - after initial render
     async function loadTrendingMovies() {
-    try {
-      const movies = await getTrendingMovies();
+      setIsTrendingLoading(true);
+      setTrendingError('');
 
-      setTrendingMovies(movies);
+      try {
+        const movies = await getTrendingMovies();
 
-    } catch(e) {
-      console.error(`Error fetching trending movies: ${e}`);
-      
-    }
+        setTrendingMovies(movies);
+
+      } catch(e) {
+        console.error(`Error fetching trending movies: ${e}`);
+        setTrendingError('Unable to fetch trending movies. Please try again.');
+
+      } finally {
+        setIsTrendingLoading(false);
+      }
   }
 
   loadTrendingMovies();
@@ -105,20 +95,28 @@ export default function App() {
         <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm}/>
         </header>
 
-        {trendingMovies.length > 0 && (
-          <section className='trending'>
-            <h2>Trending Movies</h2>
+        <section className='trending'>
+          {isTrendingLoading ? (
+              <Spinner />
+            ) : trendingError ? (
+              <p className='text-red-500'>{trendingError}</p>
+            ) : trendingMovies.length > 0 ? (
+              <>
+                <h2>Trending Movies</h2>
+                <ul>
+                  {trendingMovies.map((movie, index) => 
+                    <li key={movie.$id}>
+                      <p>{index + 1}</p>
+                      <img src={movie.poster_url} alt={movie.title}/>
+                    </li>
+                  )}
+                </ul>
+              </>
+            ) : (
+              <p className='text-red-500'>Off-trending season. We'll get back with trending movies soon</p>
+            )}
+        </section>
 
-            <ul>
-              {trendingMovies.map((movie, index) => 
-                <li key={movie.$id}>
-                  <p>{index + 1}</p>
-                  <img src={movie.poster_url} alt={movie.title}/>
-                </li>
-              )}
-            </ul>
-          </section>
-        )}
 
         <section className='all-movies'>
           {debouncedSearchTerm.length !== 0 
