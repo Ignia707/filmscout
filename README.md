@@ -1,44 +1,55 @@
-# filmScout - Movie Search App
+# FilmScout - Movie Search App
 
 A movie discovery app where users can search for movies and see trending searches based on real usage.
 
 ## Features
 
-- Search movies via The Movie Database API
-- Debounced search input 
-- Trending Movies section — tracks and ranks the most-searched movies
+- Search and discover movies via The Movie Database (TMDB) API
+- Debounced search input
+- Trending Movies section — tracks and ranks the most-searched terms
 - Responsive UI with Tailwind CSS
 
 ## Tech Stack
 
-- **Frontend:** React (Vite)
-- **Styling:** Tailwind CSS
-- **Backend (current):** Appwrite (Cloud) - BaaS
+- **Frontend:** React (Vite), Tailwind CSS
+- **Backend:** Node.js, Express, MongoDB
 - **Movie data:** TMDB API
+- **Deployment:** Vercel (frontend), Render (backend)
 
-## Status
+## Architecture
 
-- Currently building a custom Node.js/Express + MongoDB backend to replace Appwrite as a learning project
-- The two backends are designed to be swappable via an `env` variable, so this README will be updated once that's live.
+This started as a tutorial project using Appwrite (BaaS) for search tracking. It's since been rebuilt with a custom Express + MongoDB backend, which now also proxies TMDB requests server-side (keeping the API key off the client). `client/src/services/appwrite.js` is kept in the repo as a reference to the original implementation.
+```
+filmScout/
 
+├── client/   → React frontend
+
+└── server/   → Express + MongoDB backend
+```
 ## Getting Started
 
+**Backend**
 ```bash
+cd server
 npm install
 npm run dev
 ```
-
-Create a `.env.local` file with:
+Create `server/.env`:
 ```bash
-VITE_TMDB_API_KEY=your_tmdb_api_key
-
-VITE_APPWRITE_PROJECT_ID=your_project_id
-
-VITE_APPWRITE_DATABASE_ID=your_database_id
-
-VITE_APPWRITE_TABLE_ID=your_table_id
-
-VITE_APPWRITE_ENDPOINT=your_appwrite_region_endpoint
+PORT=3000
+MONGO_URI=your_mongodb_connection_string
+TMDB_API_KEY=your_tmdb_api_key
+FRONTEND_URL=http://localhost:5173
 ```
 
+**Frontend**
+```bash
+cd client
+npm install
+npm run dev
+```
+Create `client/.env.local`:
+```bash
+VITE_BACKEND_API_URL=http://localhost:3000/api/movies
+```
 ---
